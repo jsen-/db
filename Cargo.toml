@@ -1,0 +1,9 @@
+[package]
+name = "sync"
+version = "0.1.0"
+authors = ["jsen- <max.enhanced@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+rusqlite = { version = "0.15.0", features=["bundled"] }
+oracle = {path = "../rust-oracle"}
