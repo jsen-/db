@@ -1,25 +1,28 @@
 mod oracle;
 mod sqlite;
 
-pub trait Queryable<C> {
+pub trait Queryable<STMT> {
     type Error;
 
-    fn query(self, sql: &str, conn: &C) -> Result<(), Self::Error>;
+    fn query(self, stmt: &mut STMT) -> Result<(), Self::Error>;
 }
 
-pub trait Fetch<C> {
-    fn fetch<Q, S>(&self, sql: S, p: Q) -> Result<(), Q::Error>
-    where
-        Q: Queryable<C>,
-        S: AsRef<str>;
+pub trait Preparable<'a, S> {
+    type Error;
+    fn prep<SQL: AsRef<str>>(&'a self, sql: SQL) -> Result<S, Self::Error>;
 }
 
-impl<C> Fetch<C> for C {
-    fn fetch<Q, S>(&self, sql: S, p: Q) -> Result<(), Q::Error>
+pub trait Fetch<STMT> {
+    fn fetch<Q>(&mut self, p: Q) -> Result<(), Q::Error>
     where
-        Q: Queryable<C>,
-        S: AsRef<str>,
+        Q: Queryable<STMT>;
+}
+
+impl<STMT> Fetch<STMT> for STMT {
+    fn fetch<Q>(&mut self, p: Q) -> Result<(), Q::Error>
+    where
+        Q: Queryable<STMT>,
     {
-        p.query(sql.as_ref(), self)
+        p.query(self)
     }
 }

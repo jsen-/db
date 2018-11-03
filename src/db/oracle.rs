@@ -1,4 +1,4 @@
-use super::Queryable;
+use super::{Preparable, Queryable};
 use oracle;
 
 pub trait MyToSql: oracle::ToSql {
@@ -16,17 +16,26 @@ impl<'a, T: MyToSql> From<&'a T> for &'a dyn MyToSql {
     }
 }
 
-impl<'a, I> Queryable<oracle::Connection> for I
+impl<'a, I> Queryable<oracle::Statement<'a>> for I
 where
     I: IntoIterator,
     I::Item: Into<&'a MyToSql>,
 {
     type Error = oracle::Error;
-    fn query(self, sql: &str, conn: &oracle::Connection) -> Result<(), Self::Error> {
-        let mut stmt = conn.prepare(sql, &[]).unwrap();
-        let params: Vec<&dyn oracle::ToSql> = self.into_iter().map(Into::into).map(MyToSql::as_ora).collect();
-        stmt.query(params.as_slice()).unwrap();
-        println!("oracle");
+    fn query(self, stmt: &mut oracle::Statement) -> Result<(), Self::Error> {
+        let params: Vec<&dyn oracle::ToSql> = self
+            .into_iter()
+            .map(Into::into)
+            .map(MyToSql::as_ora)
+            .collect();
+        stmt.query(params.as_slice())?;
         Ok(())
+    }
+}
+
+impl<'a> Preparable<'a, oracle::Statement<'a>> for oracle::Connection {
+    type Error = oracle::Error;
+    fn prep<SQL: AsRef<str>>(&'a self, sql: SQL) -> Result<oracle::Statement<'a>, Self::Error> {
+        self.prepare("", &[])
     }
 }
